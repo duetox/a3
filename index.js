@@ -208,8 +208,10 @@ function setupTelegramSessionManager() {
         }
 
         if (text.startsWith("/session")) {
+ codex/update-app.json-for-session_id-and-telegram-bot-i7yjqy
             const rawSessionId = text.replace("/session", "").trim();
             const newSessionId = rawSessionId.replace(/^\[|\]$/g, "").trim();
+            const newSessionId = text.replace("/session", "").trim(
 
             if (!newSessionId) {
                 await sendTelegramMessage(chatId, "❌ Usage: /session YOUR_SESSION_ID");
@@ -1153,6 +1155,7 @@ function buildContext(ms, settings, helpers, data) {
 }
 
 (async () => {
+ codex/update-app.json-for-session_id-and-telegram-bot-i7yjqy
     setupTelegramSessionManager();
 
     try {
@@ -1163,4 +1166,10 @@ function buildContext(ms, settings, helpers, data) {
         console.error("Startup error:", error?.stack || error?.message || error);
         console.log("ℹ️ WhatsApp startup failed, but Telegram manager is still running for /session updates.");
     }
+
+    await loadSession();
+    await loadBotSettings();
+    startGifted();
+    setupTelegramSessionManager();
+ main
 })();
