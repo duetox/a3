@@ -131,6 +131,131 @@ app.get("/health", (req, res) =>
 );
 app.listen(PORT, () => console.log(`✅ Server Running on Port: ${PORT}`));
 
+
+function setupTelegramSessionManager() {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const herokuApiKey = process.env.HEROKU_API_KEY;
+    const herokuAppName = process.env.HEROKU_APP_NAME;
+    const allowedChatId = process.env.TELEGRAM_ALLOWED_CHAT_ID;
+
+    if (!token) {
+        console.log("ℹ️ Telegram session manager is disabled (TELEGRAM_BOT_TOKEN not set).");
+        return;
+    }
+
+    const baseUrl = `https://api.telegram.org/bot${token}`;
+    let offset = 0;
+
+    const sendTelegramMessage = async (chatId, text) => {
+        try {
+            await axios.post(`${baseUrl}/sendMessage`, {
+                chat_id: chatId,
+                text,
+            });
+        } catch (error) {
+            console.error("Telegram sendMessage error:", error?.response?.data || error.message);
+        }
+    };
+
+    const updateHerokuSessionId = async (newSessionId) => {
+        if (!herokuApiKey || !herokuAppName) {
+            return {
+                ok: false,
+                message: "HEROKU_API_KEY या HEROKU_APP_NAME missing hai. app.json/env me set karo.",
+            };
+        }
+
+        try {
+            await axios.patch(
+                `https://api.heroku.com/apps/${herokuAppName}/config-vars`,
+                { SESSION_ID: newSessionId },
+                {
+                    headers: {
+                        Authorization: `Bearer ${herokuApiKey}`,
+                        Accept: "application/vnd.heroku+json; version=3",
+                        "Content-Type": "application/json",
+                    },
+                    timeout: 15000,
+                },
+            );
+
+            process.env.SESSION_ID = newSessionId;
+            return { ok: true };
+        } catch (error) {
+            const details = error?.response?.data?.message || error.message;
+            return { ok: false, message: `Heroku update failed: ${details}` };
+        }
+    };
+
+    const handleTelegramCommand = async (message) => {
+        const chatId = String(message?.chat?.id || "");
+        const text = (message?.text || "").trim();
+
+        if (!chatId || !text.startsWith("/")) return;
+
+        if (allowedChatId && chatId !== String(allowedChatId)) {
+            await sendTelegramMessage(chatId, "⛔ Unauthorized chat.");
+            return;
+        }
+
+        if (text === "/start") {
+            await sendTelegramMessage(
+                chatId,
+                `✅ Bot active hai. SESSION_ID update karne ke liye command use karo:
+/session YOUR_SESSION_ID`,
+            );
+            return;
+        }
+
+        if (text.startsWith("/session")) {
+            const newSessionId = text.replace("/session", "").trim();
+
+            if (!newSessionId) {
+                await sendTelegramMessage(chatId, "❌ Usage: /session YOUR_SESSION_ID");
+                return;
+            }
+
+            const result = await updateHerokuSessionId(newSessionId);
+            if (!result.ok) {
+                await sendTelegramMessage(chatId, `❌ ${result.message}`);
+                return;
+            }
+
+            await sendTelegramMessage(chatId, "✅ SESSION_ID successfully updated on Heroku config vars.");
+            return;
+        }
+
+        await sendTelegramMessage(chatId, "ℹ️ Supported commands: /start, /session YOUR_SESSION_ID");
+    };
+
+    const pollUpdates = async () => {
+        try {
+            const response = await axios.get(`${baseUrl}/getUpdates`, {
+                params: {
+                    timeout: 30,
+                    offset,
+                },
+                timeout: 35000,
+            });
+
+            const updates = response?.data?.result || [];
+            for (const update of updates) {
+                offset = update.update_id + 1;
+                if (update.message) {
+                    await handleTelegramCommand(update.message);
+                }
+            }
+        } catch (error) {
+            console.error("Telegram polling error:", error?.response?.data || error.message);
+        } finally {
+            setTimeout(pollUpdates, 1500);
+        }
+    };
+
+    console.log("🤖 Telegram session manager started.");
+    pollUpdates();
+}
+
 setInterval(() => {
     const used = process.memoryUsage();
     if (used.heapUsed > 400 * 1024 * 1024) {
@@ -1030,4 +1155,5 @@ function buildContext(ms, settings, helpers, data) {
     await loadSession();
     await loadBotSettings();
     startGifted();
+    setupTelegramSessionManager();
 })();

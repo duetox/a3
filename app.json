@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "description": "Atassa, a Multi Device Whatsapp Bot built by Gifted Tech to Enhance Whatsapp Communication Experience",
   "logo": "https://i.ibb.co/5Xjj5sxz/tourl-1777040577237.jpg",
-  "keywords": ["atassa", "gifted-baileys", "gifted-btns", "gifted-api"],
+  "keywords": [
+    "atassa",
+    "gifted-baileys",
+    "gifted-btns",
+    "gifted-api"
+  ],
   "success_url": "/",
   "stack": "heroku-24",
   "env": {
     "SESSION_ID": {
       "description": "Your bot SESSION_ID. Get one from the pairing session page.",
-      "required": true,
+      "required": false,
       "value": ""
     },
     "MODE": {
@@ -36,6 +41,26 @@
       "description": "PostgreSQL connection URL. Leave blank to use the auto-provisioned Heroku Postgres addon, or supply your own (Neon, Supabase, etc.). Falls back to SQLite if empty and no addon is attached.",
       "required": false,
       "value": ""
+    },
+    "TELEGRAM_BOT_TOKEN": {
+      "description": "Telegram bot token from BotFather used to manage SESSION_ID remotely.",
+      "required": false,
+      "value": ""
+    },
+    "HEROKU_API_KEY": {
+      "description": "Heroku API key with permission to update app config vars.",
+      "required": false,
+      "value": ""
+    },
+    "HEROKU_APP_NAME": {
+      "description": "Heroku app name where SESSION_ID should be updated.",
+      "required": false,
+      "value": ""
+    },
+    "TELEGRAM_ALLOWED_CHAT_ID": {
+      "description": "Optional Telegram chat/user ID allowed to run /session command.",
+      "required": false,
+      "value": ""
     }
   },
   "addons": [
@@ -45,8 +70,12 @@
     }
   ],
   "buildpacks": [
-    { "url": "heroku/nodejs" },
-    { "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest" }
+    {
+      "url": "heroku/nodejs"
+    },
+    {
+      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest"
+    }
   ],
   "formation": {
     "web": {
