@@ -1,0 +1,4 @@
+node_modules/
+.git/*.lock
+gift/session/
+.env
